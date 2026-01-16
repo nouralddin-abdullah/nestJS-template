@@ -12,3 +12,7 @@ export * from './guards/local-auth.guard';
 
 // types
 export * from './types/auth.types';
+
+// pagination
+export * from './dto/pagination-query.dto';
+export * from './dto/paginated-response.dto';

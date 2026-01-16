@@ -8,6 +8,11 @@ import { User } from './user.entity';
 import { Repository } from 'typeorm';
 import { StorageService } from '../storage';
 import { randomUUID } from 'crypto';
+import {
+  PaginationQuery,
+  PaginatedResponse,
+  createPaginatedResponse,
+} from '../common';
 
 @Injectable()
 export class UsersService {
@@ -100,5 +105,18 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     return await this.userRepo.remove(user);
+  }
+
+  // find all users (paginated)
+  async findAll(query: PaginationQuery): Promise<PaginatedResponse<User>> {
+    const { page, limit, sortBy, order } = query;
+
+    const [data, total] = await this.userRepo.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { [sortBy]: order.toUpperCase() as 'ASC' | 'DESC' },
+    });
+
+    return createPaginatedResponse(data, total, page, limit);
   }
 }
