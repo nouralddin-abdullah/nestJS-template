@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from './users.service';
 import { randomBytes, scrypt as _scrypt } from 'crypto';
@@ -81,6 +85,28 @@ export class AuthService {
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '24h'),
       tokenType: 'Bearer',
     };
+  }
+
+  //change password for currentUser
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new BadRequestException("User wasn't found!");
+    }
+    const isPasswordValid = await this.verifyPassword(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Wrong password!');
+    }
+    const newHashedPassword = await this.hashPassword(newPassword);
+    user.password = newHashedPassword;
+    return this.usersService.save(user);
   }
 
   // HELPERTS TO HASH PASSWORD AND VERIFY IT

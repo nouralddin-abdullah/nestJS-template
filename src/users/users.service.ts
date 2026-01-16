@@ -89,12 +89,31 @@ export class UsersService {
   }
 
   // update user with optional attr
-  async update(id: string, attrs: Partial<User>): Promise<User> {
+  async update(
+    id: string,
+    attrs: Partial<User>,
+    avatarFile?: { buffer: Buffer; originalname: string; mimetype: string },
+  ): Promise<User> {
     const user = await this.findOne(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     Object.assign(user, attrs);
+    if (avatarFile) {
+      const key = `avatars/${user.id}-${Date.now()}`;
+      const result = await this.storageService.upload({
+        key,
+        body: avatarFile.buffer,
+        contentType: avatarFile.mimetype,
+      });
+      user.avatar = result.url;
+    }
+
+    // save it now
+    return await this.userRepo.save(user);
+  }
+
+  async save(user: User): Promise<User> {
     return await this.userRepo.save(user);
   }
 

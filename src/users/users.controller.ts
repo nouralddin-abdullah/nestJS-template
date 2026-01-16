@@ -21,6 +21,8 @@ import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user.dto';
 import * as common from '../common';
 import type { AuthenticatedUser } from '../common/types/auth.types';
+import { UpdatePasswordDto } from './dto/change-password.dto';
+import { UpdateMeSwaggerDto } from './swagger-schema/updateme-swagger.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -84,14 +86,45 @@ export class UsersController {
 
   // update current user
   @Patch('/me')
+  @ApiConsumes('multipart/form-data')
+  @common.ImageUpload('avatar')
+  @ApiBody({ type: UpdateMeSwaggerDto })
   async updateCurrentUser(
     @common.CurrentUser('userId') userId: string,
     @Body() body: UpdateUserDTO,
+    @common.UploadedImage({ required: false, maxSize: common.FileSizes.MB(5) })
+    file?: Express.Multer.File,
   ) {
-    await this.usersService.update(userId, body);
+    await this.usersService.update(
+      userId,
+      body,
+      file
+        ? {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+          }
+        : undefined,
+    );
     return {
       success: true,
       message: 'Profile updated successfully',
+    };
+  }
+
+  @Patch('/changepassword')
+  async changePassword(
+    @common.CurrentUser('userId') userId: string,
+    @Body() body: UpdatePasswordDto,
+  ) {
+    await this.authService.changePassword(
+      userId,
+      body.currentPassword,
+      body.newPassword,
+    );
+    return {
+      success: true,
+      message: 'User password was changed!',
     };
   }
 
