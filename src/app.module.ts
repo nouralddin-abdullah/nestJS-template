@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -9,12 +10,28 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { LoggerModule } from 'nestjs-pino';
 import { StorageModule, StorageProviderType } from './storage';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // avaliable everywhere you don't have to add it to each module
       envFilePath: '.env',
+    }),
+
+    // rate limiting - 10 requests per 60 seconds by default (can be changed from ENV)
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: configService.get<number>('THROTTLE_TTL', 60) * 1000,
+            limit: configService.get<number>('THROTTLE_LIMIT', 10),
+          },
+        ],
+      }),
+      inject: [ConfigService],
     }),
 
     // pino logger
@@ -46,20 +63,29 @@ import { StorageModule, StorageProviderType } from './storage';
       inject: [ConfigService],
     }),
 
-    // database
+    // database (PostgreSQL)
+    // in development: synchronize=true (auto-creates tables from entities)
+    // in production: synchronize=false (use migrations instead)
+    // run migrations with: npm run migration:run
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        type: 'sqlite',
-        database: configService.get('DB_NAME', 'db.sqlite'),
+        type: 'postgres',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'postgres'),
+        database: configService.get('DB_DATABASE', 'nestjs_db'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') !== 'production', // for safty
+        synchronize: configService.get('NODE_ENV') !== 'production',
+        migrations: ['dist/database/migrations/*.js'],
+        migrationsRun: configService.get('NODE_ENV') === 'production',
       }),
       inject: [ConfigService],
     }),
 
-    // Cloud storage (S3/R2)
-    // Set STORAGE_PROVIDER to 's3' or 'r2' in your .env file
+    // cloud storage (S3/R2)
+    // set STORAGE_PROVIDER to 's3' or 'r2' in your .env file
     StorageModule.forRootAsync({
       isGlobal: true,
       imports: [ConfigModule],
@@ -80,6 +106,7 @@ import { StorageModule, StorageProviderType } from './storage';
 
     PassportModule,
     UsersModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
@@ -92,6 +119,11 @@ import { StorageModule, StorageProviderType } from './storage';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // global rate limiting guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
