@@ -1,5 +1,5 @@
 import { DynamicModule, Module, Provider, Logger } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
+import { BullModule, getQueueToken } from '@nestjs/bullmq';
 import { MailService } from './mail.service';
 import { MailProcessor } from './mail.processor';
 import {
@@ -16,30 +16,11 @@ import {
 import { SmtpProvider } from './providers/smtp.provider';
 import { SendGridProvider } from './providers/sendgrid.provider';
 import { ResendProvider } from './providers/resend.provider';
+import { secrets } from '../config/secrets';
 
 @Module({})
 export class MailModule {
   private static readonly logger = new Logger(MailModule.name);
-
-  /**
-   * check if quque is enabled
-   * read directly from process.env since this runs at module initialization
-   */
-  private static isQueueEnabled(): boolean {
-    const enabled = process.env.MAIL_QUEUE_ENABLED;
-    return enabled === 'true' || enabled === '1';
-  }
-
-  /**
-   * get Redis configuration from .env
-   */
-  private static getRedisConfig() {
-    return {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      password: process.env.REDIS_PASSWORD || undefined,
-    };
-  }
 
   /**
    * register mail module with async config
@@ -52,7 +33,7 @@ export class MailModule {
    * - REDIS_PASSWORD: Redis password (optional)
    */
   static forRootAsync(options: MailModuleAsyncOptions): DynamicModule {
-    const queueEnabled = this.isQueueEnabled();
+    const queueEnabled = secrets.mail.queueEnabled;
 
     this.logger.log(
       `Initializing MailModule with queue: ${queueEnabled ? 'enabled' : 'disabled'}`,
@@ -78,14 +59,19 @@ export class MailModule {
 
     if (queueEnabled) {
       // Add BullMQ with Redis when queue is enabled
-      const redisConfig = this.getRedisConfig();
+      const redisConfig = secrets.redis;
       this.logger.log(
         `Connecting to Redis at ${redisConfig.host}:${redisConfig.port}`,
       );
 
       imports.push(
         BullModule.forRoot({
-          connection: redisConfig,
+          connection: {
+            host: redisConfig.host,
+            port: redisConfig.port,
+            username: redisConfig.username,
+            password: redisConfig.password || undefined,
+          },
         }),
         BullModule.registerQueue({
           name: MAIL_QUEUE,
@@ -93,9 +79,9 @@ export class MailModule {
       );
       providers.push(MailProcessor);
     } else {
-      // Provide null queue when disabled
+      // Provide null queue when disabled (using BullMQ's token format)
       providers.push({
-        provide: MAIL_QUEUE,
+        provide: getQueueToken(MAIL_QUEUE),
         useValue: null,
       });
     }

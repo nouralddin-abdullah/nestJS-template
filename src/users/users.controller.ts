@@ -18,6 +18,7 @@ import { SignupSwaggerDto } from './swagger-schema/signup-swagger.dto';
 import { UsersService } from './users.service';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { Serialize } from '../interceptors/serialize.interceptor';
+import { secrets } from '../config/secrets';
 import { UserDTO } from './dto/user.dto';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -26,6 +27,7 @@ import type { AuthenticatedUser } from '../common/types/auth.types';
 import { UpdatePasswordDto } from './dto/change-password.dto';
 import { UpdateMeSwaggerDto } from './swagger-schema/updateme-swagger.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -137,6 +139,12 @@ export class UsersController {
     return await this.authService.forgetPassword(body.email);
   }
 
+  @Post('/reset-password')
+  @common.Public()
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return await this.authService.resetPassword(body.token, body.newPassword);
+  }
+
   // delete the current user
   @Delete('/me')
   async deleteCurrentUser(@common.CurrentUser('userId') userId: string) {
@@ -183,7 +191,7 @@ export class UsersController {
     // you have 2 options depending on your use cases:
     // option 1: redirect to frontend with token in query params
     // good for web apps - frontend can extract token and store it
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = secrets.frontendUrl;
     res.redirect(
       `${frontendUrl}/auth/callback?token=${token.accessToken}&expiresIn=${token.expiresIn}`,
     );

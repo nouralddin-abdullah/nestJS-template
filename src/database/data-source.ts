@@ -1,18 +1,15 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { config } from 'dotenv';
-
-// load environment variables
-config();
+import { secrets } from '../config/secrets';
 
 // database configuration for migrations
 // this file is used by TypeORM CLI for running migrations
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_DATABASE || 'nestjs_db',
+  host: secrets.db.host,
+  port: secrets.db.port,
+  username: secrets.db.username,
+  password: secrets.db.password,
+  database: secrets.db.database,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/database/migrations/*.js'],
   synchronize: false, // always false - use migrations instead

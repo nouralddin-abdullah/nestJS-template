@@ -6,8 +6,10 @@ import {
   TypeOrmHealthIndicator,
   MemoryHealthIndicator,
   DiskHealthIndicator,
+  HealthIndicatorResult,
 } from '@nestjs/terminus';
 import { Public } from '../common';
+import { secrets } from '../config/secrets';
 
 @ApiTags('Health')
 @Controller('health')
@@ -18,6 +20,38 @@ export class HealthController {
     private memory: MemoryHealthIndicator,
     private disk: DiskHealthIndicator,
   ) {}
+
+  // simple Redis ping check
+  private async checkRedis(): Promise<HealthIndicatorResult> {
+    if (!secrets.mail.queueEnabled) {
+      return { redis: { status: 'up', enabled: false } };
+    }
+
+    try {
+      const { createClient } = await import('redis');
+      const client = createClient({
+        socket: {
+          host: secrets.redis.host,
+          port: secrets.redis.port,
+        },
+        username: secrets.redis.username,
+        password: secrets.redis.password || undefined,
+      });
+
+      await client.connect();
+      await client.ping();
+      await client.disconnect();
+
+      return { redis: { status: 'up' } };
+    } catch (error) {
+      return {
+        redis: {
+          status: 'down',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+    }
+  }
 
   @Public()
   @Get()
@@ -36,6 +70,9 @@ export class HealthController {
           path: process.platform === 'win32' ? 'C:\\' : '/',
           thresholdPercent: 0.9,
         }),
+
+      // redis health check (only when queue enabled)
+      () => this.checkRedis(),
     ]);
   }
 

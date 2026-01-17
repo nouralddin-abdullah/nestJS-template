@@ -4,6 +4,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { Logger } from 'nestjs-pino';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { secrets } from './config/secrets';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -16,7 +17,7 @@ async function bootstrap() {
 
   // CORS configuration
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+    origin: secrets.corsOrigin.split(','),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -48,6 +49,6 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(secrets.port);
 }
 bootstrap();

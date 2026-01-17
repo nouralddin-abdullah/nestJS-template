@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from './user.entity';
 import { TokenResponse, JwtPayload } from '../common/types/auth.types';
 import { MailService } from '../mail';
+import { secrets } from '../config/secrets';
 
 const scrypt = promisify(_scrypt);
 
@@ -112,7 +113,7 @@ export class AuthService {
     return this.usersService.save(user);
   }
 
-  // reset password & send reset password email
+  // forget password req & send reset password email
   async forgetPassword(email: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
@@ -130,15 +131,42 @@ export class AuthService {
     await this.usersService.save(user);
 
     // let's now build the url and send email with mail service
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`; //make sure frontend url is in env
+    const resetUrl = `${secrets.frontendUrl}/reset-password?token=${rawToken}`; //make sure frontend url is in env
     await this.mailService.sendPasswordReset(user.email, {
       username: user.username,
       resetUrl,
       expiresIn: '1 hour',
+      appName: 'Together',
     });
     //important note: if MAIL_QUEUE_ENABLED=false this will be sync call so user will wait for return
     // and bullmq not being used, it's only for test. if you want to go production use redis and make MAIL_QUEUE_ENABLED=true
     return { message: 'If email exists, reset link sent' };
+  }
+
+  // reset password with token (from email link)
+  async resetPassword(token: string, newPassword: string) {
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+    const user = await this.usersService.findByResetToken(hashedToken);
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // check if user has token or if it was expired
+    if (!user.passwordResetExpired || user.passwordResetExpired < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    // hash the new password and update
+    user.password = await this.hashPassword(newPassword);
+
+    // clear reset token fields
+    user.passwordResetToken = null;
+    user.passwordResetExpired = null;
+
+    await this.usersService.save(user);
+
+    return { message: 'Password reset successful' };
   }
 
   // HELPERTS TO HASH PASSWORD AND VERIFY IT

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import {
   MAIL_CONFIG,
@@ -12,6 +13,7 @@ import type {
   MailResult,
   MailConfig,
 } from './interfaces';
+import { secrets } from '../config/secrets';
 
 // templates imports + plain texts templates
 import {
@@ -44,13 +46,12 @@ export class MailService {
     private readonly config: MailConfig,
     @Inject(MAIL_PROVIDER)
     private readonly provider: IMailProvider,
-    @Inject(MAIL_QUEUE)
     @Optional()
+    @InjectQueue(MAIL_QUEUE)
     mailQueue?: Queue,
   ) {
     this.mailQueue = mailQueue ?? null;
-    this.queueEnabled =
-      (config.queue?.enabled ?? false) && this.mailQueue !== null;
+    this.queueEnabled = secrets.mail.queueEnabled && this.mailQueue !== null;
     this.logger.log(
       `Mail service initialized. Queue: ${this.queueEnabled ? 'enabled' : 'disabled'}`,
     );

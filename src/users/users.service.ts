@@ -77,6 +77,10 @@ export class UsersService {
     return await this.userRepo.findOneBy({ username: username.toLowerCase() });
   }
 
+  async findByResetToken(hashedToken: string): Promise<User | null> {
+    return await this.userRepo.findOneBy({ passwordResetToken: hashedToken });
+  }
+
   // make a login with Identifier (email or username)
   async findByLoginIdentifier(loginIdentifier: string): Promise<User | null> {
     const identifier = loginIdentifier.toLowerCase();

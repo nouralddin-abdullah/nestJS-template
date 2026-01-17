@@ -30,11 +30,11 @@ export class User {
   @Column({ type: 'varchar', default: Role.USER })
   role: Role;
 
-  @Column({ nullable: true })
-  passwordResetToken: string;
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetToken: string | null;
 
-  @Column({ nullable: true })
-  passwordResetExpired: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpired: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;
