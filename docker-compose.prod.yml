@@ -1,5 +1,12 @@
-# Use this when connecting to an external PostgreSQL (AWS RDS, Azure, Supabase, Neon, etc.)
-# Just provide the DB_* environment variables pointing to your cloud database
+# ===========================================
+# PRODUCTION - All External (Cloud)
+# ===========================================
+# Use when PostgreSQL & Redis are hosted externally
+# (Supabase, Neon, AWS RDS, Upstash, Redis Cloud, etc.)
+#
+# Usage: docker compose -f docker-compose.prod.yml up --build -d
+# ===========================================
+
 services:
   api:
     build:
@@ -9,29 +16,11 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=3000
-      # Database - point these to your cloud PostgreSQL
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_DATABASE=${DB_DATABASE}
-      # App config
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
-      - THROTTLE_TTL=${THROTTLE_TTL:-60}
-      - THROTTLE_LIMIT=${THROTTLE_LIMIT:-10}
-      # Storage
-      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-s3}
-      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT}
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
-      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY}
-      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
-      - STORAGE_BUCKET=${STORAGE_BUCKET}
-      - STORAGE_PUBLIC_URL=${STORAGE_PUBLIC_URL}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health/live"]
       interval: 30s

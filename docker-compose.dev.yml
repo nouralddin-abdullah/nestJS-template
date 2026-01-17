@@ -1,6 +1,12 @@
-# development docker-compose with hot-reload
+# ===========================================
+# DEVELOPMENT - With Hot Reload
+# ===========================================
+# PostgreSQL + Redis + API with live code reloading
+#
+# Usage: docker compose -f docker-compose.dev.yml up --build
+# ===========================================
+
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: nestjs-postgres-dev
@@ -20,7 +26,6 @@ services:
     networks:
       - app-network
 
-  # Redis (for BullMQ email queue) - optional for dev
   redis:
     image: redis:7-alpine
     container_name: nestjs-redis-dev
@@ -49,6 +54,8 @@ services:
         condition: service_healthy
     ports:
       - "${PORT:-3000}:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -56,9 +63,6 @@ services:
       - DB_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_USERNAME=default
-    env_file:
-      - .env
     volumes:
       - .:/app
       - /app/node_modules
@@ -68,6 +72,12 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres-data-dev:
+    driver: local
+  redis-data-dev:
+    driver: local
 
 volumes:
   postgres-data-dev:
