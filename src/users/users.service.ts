@@ -138,4 +138,24 @@ export class UsersService {
 
     return createPaginatedResponse(data, total, page, limit);
   }
+
+  // create user from OAuth provider (skips duplicate - already done in AuthService)
+  async createFromOAuth(data: {
+    email: string;
+    username: string;
+    nickName: string;
+    password: string;
+    avatar?: string;
+  }): Promise<User> {
+    const user = this.userRepo.create({
+      id: randomUUID(),
+      email: data.email,
+      username: data.username,
+      nickName: data.nickName,
+      password: data.password,
+      avatar: data.avatar,
+    });
+
+    return await this.userRepo.save(user);
+  }
 }

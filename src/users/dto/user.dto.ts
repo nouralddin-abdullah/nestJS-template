@@ -1,4 +1,5 @@
 import { Expose } from 'class-transformer';
+import { Role } from '../../common/types/roles.enum';
 
 export class UserDTO {
   @Expose()
@@ -15,4 +16,7 @@ export class UserDTO {
 
   @Expose()
   avatar: string;
+
+  @Expose()
+  role: Role;
 }

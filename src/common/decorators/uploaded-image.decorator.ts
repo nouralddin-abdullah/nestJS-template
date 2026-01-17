@@ -26,16 +26,16 @@ export interface UploadedImageOptions {
 }
 
 /**
- * Opener decorator that combines FileInterceptor with validation
- * Usage: @ImageUpload('fieldName', { required: false, maxSize: 2 * 1024 * 1024 })
+ * opener decorator that combines FileInterceptor with validation
+ * usage: @ImageUpload('fieldName', { required: false, maxSize: 2 * 1024 * 1024 })
  */
 export function ImageUpload(fieldName: string, options?: UploadedImageOptions) {
   return applyDecorators(UseInterceptors(FileInterceptor(fieldName)));
 }
 
 /**
- * Inspector decorator for extracting and validating uploaded image
- * Usage: @UploadedImage({ required: false, maxSize: 2 * 1024 * 1024 }) file?: Express.Multer.File
+ * inspector decorator for extracting and validating uploaded image
+ * usage: @UploadedImage({ required: false, maxSize: 2 * 1024 * 1024 }) file?: Express.Multer.File
  */
 export function UploadedImage(options?: UploadedImageOptions) {
   const {

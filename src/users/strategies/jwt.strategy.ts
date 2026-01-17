@@ -18,11 +18,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // validate JWT payload and return user data for every protected route
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    // mapping data from coming payload
+    // mapping data from coming payload (role is included in JWT - no DB lookup needed)
     return {
       userId: payload.sub,
       email: payload.email,
       username: payload.username,
+      role: payload.role,
     };
   }
 }

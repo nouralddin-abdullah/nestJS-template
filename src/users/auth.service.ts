@@ -5,11 +5,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from './users.service';
-import { randomBytes, scrypt as _scrypt } from 'crypto';
+import { randomBytes, scrypt as _scrypt, createHash } from 'crypto';
 import { promisify } from 'util';
 import { JwtService } from '@nestjs/jwt';
 import { User } from './user.entity';
 import { TokenResponse, JwtPayload } from '../common/types/auth.types';
+import { MailService } from '../mail';
 
 const scrypt = promisify(_scrypt);
 
@@ -23,6 +24,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   // register a new user
@@ -72,12 +74,13 @@ export class AuthService {
     return user;
   }
 
-  // generate the jwt
+  // generate the jwt (includes role for RBAC - no DB lookup on each request)
   generateToken(user: User): TokenResponse {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       username: user.username,
+      role: user.role,
     };
 
     return {
@@ -109,6 +112,35 @@ export class AuthService {
     return this.usersService.save(user);
   }
 
+  // reset password & send reset password email
+  async forgetPassword(email: string) {
+    const user = await this.usersService.findOneByEmail(email);
+    if (!user) {
+      return { message: 'If your email exist, the reset mail has been sent' };
+    }
+
+    // generate reset token
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+    // save to user
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpired = expires;
+    await this.usersService.save(user);
+
+    // let's now build the url and send email with mail service
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`; //make sure frontend url is in env
+    await this.mailService.sendPasswordReset(user.email, {
+      username: user.username,
+      resetUrl,
+      expiresIn: '1 hour',
+    });
+    //important note: if MAIL_QUEUE_ENABLED=false this will be sync call so user will wait for return
+    // and bullmq not being used, it's only for test. if you want to go production use redis and make MAIL_QUEUE_ENABLED=true
+    return { message: 'If email exists, reset link sent' };
+  }
+
   // HELPERTS TO HASH PASSWORD AND VERIFY IT
 
   // hash password with salt
@@ -131,5 +163,61 @@ export class AuthService {
       HASH_LENGTH,
     )) as Buffer;
     return storedHash === candidateHash.toString('hex');
+  }
+
+  // google OAuth:
+  // 1- find existing user by email
+  // 2-create new one if the email wasn't already found
+  async validateGoogleUser(profile: {
+    email: string;
+    displayName: string;
+    avatar?: string;
+  }): Promise<User> {
+    const { email, displayName, avatar } = profile;
+
+    // if user exist we just return it
+    let user = await this.usersService.findOneByEmail(email);
+
+    if (user) {
+      return user;
+    }
+
+    // user doesn't exist - create new account
+    // generate random password (user won't know it, they'll use Google to login)
+    // this honestly might cause some issue to the user later if he wanted to
+    // change his password but the key to solve that add 'AuthProvider' in user entity
+    // and if it's google don't ask for password (but don't think alot about it since user will mostly login with google)
+    const randomPassword = await this.hashPassword(
+      Math.random().toString(36).slice(-16) + Date.now().toString(36),
+    );
+
+    // generate unique username from email
+    const baseUsername = email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    let username = baseUsername;
+    let counter = 1;
+
+    // making sure that sername is unique -> extra query ik but you can remove it
+    // since username is from email - @gmail.com so mostly it wont be repeated
+    // you can add also some random number to it, but i will keep the check
+    while (await this.usersService.findOneByUsername(username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    // create user via repository using new auth method 'createFromOAuth'
+    // because we already did a check and 'create' will do another check
+    user = await this.usersService.createFromOAuth({
+      email: email.toLowerCase(),
+      username,
+      nickName: displayName,
+      password: randomPassword,
+      avatar,
+    });
+
+    // return the user to generate a token
+    return user;
   }
 }

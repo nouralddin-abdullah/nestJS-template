@@ -8,8 +8,10 @@ import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { LoggerModule } from 'nestjs-pino';
 import { StorageModule, StorageProviderType } from './storage';
+import { MailModule, MailProviderType } from './mail';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -104,6 +106,48 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
     }),
 
+    // Email service
+    // queue is auto-enabled based on MAIL_QUEUE_ENABLED env var
+    // when enabled, requires REDIS_HOST, REDIS_PORT, REDIS_PASSWORD (optional)
+    MailModule.forRootAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        provider:
+          (configService.get<string>('MAIL_PROVIDER') as MailProviderType) ||
+          MailProviderType.SMTP,
+        from: configService.get<string>('MAIL_FROM', 'noreply@example.com'),
+        smtp: {
+          host: configService.get<string>('SMTP_HOST', 'localhost'),
+          port: configService.get<number>('SMTP_PORT', 587),
+          secure: configService.get<boolean>('SMTP_SECURE', false),
+          auth: {
+            user: configService.get<string>('SMTP_USER', ''),
+            pass: configService.get<string>('SMTP_PASS', ''),
+          },
+        },
+        sendgrid: {
+          apiKey: configService.get<string>('SENDGRID_API_KEY', ''),
+        },
+        resend: {
+          apiKey: configService.get<string>('RESEND_API_KEY', ''),
+        },
+        queue: {
+          enabled: configService.get<string>('MAIL_QUEUE_ENABLED') === 'true',
+          defaultJobOptions: {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
+            removeOnComplete: 100,
+            removeOnFail: 500,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
+
     PassportModule,
     UsersModule,
     HealthModule,
@@ -119,6 +163,12 @@ import { HealthModule } from './health/health.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // global RBAC guard - use @Roles(Role.ADMIN) decorator to restrict routes
+    // runs after JwtAuthGuard, checks role from JWT payload
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
     // global rate limiting guard
     {
