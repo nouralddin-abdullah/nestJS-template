@@ -78,9 +78,3 @@ volumes:
     driver: local
   redis-data-dev:
     driver: local
-
-volumes:
-  postgres-data-dev:
-    driver: local
-  redis-data-dev:
-    driver: local
