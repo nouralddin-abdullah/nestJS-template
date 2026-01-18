@@ -28,14 +28,14 @@ updates:
           - 'prettier'
           - '@eslint/*'
 
-  # Docker base images
+  # docker base images
   - package-ecosystem: 'docker'
     directory: '/'
     schedule:
       interval: 'weekly'
       day: 'monday'
 
-  # GitHub Actions
+  # gitHub Actions
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:

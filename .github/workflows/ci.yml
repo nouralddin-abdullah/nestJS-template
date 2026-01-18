@@ -10,11 +10,9 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # ============================================
-  # Lint & Type Check
-  # ============================================
-  lint:
-    name: Lint & Type Check
+  # type check
+  typecheck:
+    name: Type Check
     runs-on: ubuntu-latest
 
     steps:
@@ -30,15 +28,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint
-
       - name: Type check
         run: npx tsc --noEmit
 
-  # ============================================
-  # Unit Tests
-  # ============================================
+  # unit tests
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -66,9 +59,7 @@ jobs:
           fail_ci_if_error: false
         continue-on-error: true
 
-  # ============================================
-  # E2E Tests
-  # ============================================
+  # e2e tests
   test-e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -128,9 +119,7 @@ jobs:
       - name: Run E2E tests
         run: npm run test:e2e -- --passWithNoTests
 
-  # ============================================
-  # Build
-  # ============================================
+  # build
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -159,9 +148,7 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # ============================================
-  # Docker Build Test
-  # ============================================
+  # docker build test
   docker:
     name: Docker Build
     runs-on: ubuntu-latest

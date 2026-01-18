@@ -10,7 +10,7 @@
  * - GET /users/me - should return current user profile
  * - PATCH /users/me - should update user profile
  * - DELETE /users/me - should delete user account
- * - GET /users (admin) - should list all users
+ * - GET /users (admin) - should list all users and throw error on unauth
  */
 
 describe('UsersController', () => {
