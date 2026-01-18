@@ -1,10 +1,10 @@
 {
-  "name": "mycv",
-  "version": "0.0.1",
-  "description": "",
+  "name": "nestjs-template",
+  "version": "1.0.0",
+  "description": "🚀 Production-ready NestJS API template with TypeORM, Zod validation, Passport (JWT & Google OAuth), Cloud Storage (S3/R2), Pino logging, Docker, PostgreSQL, and CI/CD - scaffold your next API in minutes!",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
