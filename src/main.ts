@@ -4,7 +4,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { Logger } from 'nestjs-pino';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import { secrets } from './config/secrets';
+import { secrets } from './core/config/secrets';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });

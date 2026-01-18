@@ -1,3 +1,0 @@
-// Migrations will be generated here
-// Run: npm run migration:generate -- src/database/migrations/InitialMigration
-// This creates a migration file based on your entity changes

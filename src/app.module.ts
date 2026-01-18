@@ -2,20 +2,30 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
-import { RolesGuard } from './common/guards/roles.guard';
 import { LoggerModule } from 'nestjs-pino';
-import { StorageModule, StorageProviderType } from './storage';
-import { MailModule, MailProviderType } from './mail';
-import { HealthModule } from './health/health.module';
+
+// Core module
+import { CoreModule } from './core/core.module';
+import { JwtAuthGuard } from './core/guards/jwt-auth.guard';
+import { RolesGuard } from './core/guards/roles.guard';
+
+// Feature modules
+import { UsersModule } from './features/users/users.module';
+import { HealthModule } from './features/health/health.module';
+import { StorageModule, StorageProviderType } from './features/storage';
+import { MailModule, MailProviderType } from './features/mail';
+
+// App components
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
+    // Core module - provides global guards, decorators, database, config
+    CoreModule,
+
     ConfigModule.forRoot({
       isGlobal: true, // avaliable everywhere you don't have to add it to each module
       envFilePath: '.env',
@@ -80,7 +90,7 @@ import { HealthModule } from './health/health.module';
         database: configService.get('DB_DATABASE', 'nestjs_db'),
         autoLoadEntities: true,
         synchronize: configService.get('NODE_ENV') !== 'production',
-        migrations: ['dist/database/migrations/*.js'],
+        migrations: ['dist/core/database/migrations/*.js'],
         migrationsRun: configService.get('NODE_ENV') === 'production',
       }),
       inject: [ConfigService],
