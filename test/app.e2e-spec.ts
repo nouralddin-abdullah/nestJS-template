@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import type { Server } from 'http';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from '../src/app.module';
 
 describe('AppController (e2e)', () => {
@@ -13,7 +15,7 @@ describe('AppController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(new ZodValidationPipe());
     await app.init();
   });
 
