@@ -21,13 +21,14 @@ import {
   ImageUpload,
   UploadedImage,
   FileSizes,
+  Roles,
 } from '@core/decorators';
 import { Serialize } from '@core/interceptors';
 import { secrets } from '@core/config';
 
 // Shared imports
 import { PaginatedResponseDTO, PaginationQueryDto } from '@shared/dto';
-import type { AuthenticatedUser } from '@shared/types';
+import { Role, type AuthenticatedUser } from '@shared/types';
 
 // Feature imports
 import { UsersService } from '../services/users.service';
@@ -180,6 +181,7 @@ export class UsersController {
   // get all users (paginated)
   @Serialize(PaginatedResponseDTO(UserDTO))
   @Get('users')
+  @Roles(Role.ADMIN)
   async getUsers(@Query() query: PaginationQueryDto) {
     return await this.usersService.findAll(query);
   }
